@@ -23,11 +23,34 @@ while True:
         print(f"No kafka brokers available for consumer, trying again in 5: {e}")
         time.sleep(5)
 
-
 # Connect to PostgreSQL database
 while True:
     try:
         conn = psycopg.connect("dbname=sensordata user=postgres password=postgres host=timescaledb")
+        # Check if the connection is successful and the table exists
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                create table if not exists iot_metrics
+                (
+                    time      timestamp with time zone not null,
+                    sensor_id text                     not null,
+                    key       text                     not null,
+                    value     double precision
+                );
+                
+                alter table iot_metrics
+                    owner to postgres;
+                
+                create index if not exists iot_metrics_time_idx
+                    on iot_metrics (time desc);
+                
+                create trigger ts_insert_blocker
+                    before insert
+                    on iot_metrics
+                    for each row
+                execute procedure ???();
+            """)
+            conn.commit()
         break
     except psycopg.OperationalError as e:
         print(f"Database connection failed: {e}")
