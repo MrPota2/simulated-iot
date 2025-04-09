@@ -66,6 +66,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/sensors_dashboard.json:/etc/grafana/provisioning/dashboards/sensors_dashboard.json
+      - ./grafana/kafka_dashboard.json:/etc/grafana/provisioning/dashboards/kafka_dashboard.json
+
     depends_on:
       - timescaledb
 
