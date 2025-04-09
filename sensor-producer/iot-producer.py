@@ -1,10 +1,10 @@
+import os
 import random
 import time
 import json
 from kafka import KafkaProducer
 import python_weather
 import asyncio
-import os
 
 from python_weather.forecast import Forecast
 
@@ -18,10 +18,18 @@ async def getweather() -> Forecast:
         # returns the current day's forecast temperature (int)
         return weather
 
-producer = KafkaProducer(
-    bootstrap_servers='localhost:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
+print(f'Starting iot-producer on {os.environ["KAFKA_BOOTSTRAP"]} ')
+while True:
+    try:
+        # Attempt to connect to the Kafka broker
+        producer = KafkaProducer(
+            bootstrap_servers=os.environ['KAFKA_BOOTSTRAP'],
+            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+        )
+        break
+    except Exception as e:
+        print(f"No kafka brokers available for producer, trying again in 5: {e}")
+        time.sleep(5)
 
 sensor_configs = {
     "temp_sensor_01": lambda: {
