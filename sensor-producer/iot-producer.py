@@ -5,9 +5,21 @@ import json
 from kafka import KafkaProducer
 import python_weather
 import asyncio
+import signal
+import sys
 
 from python_weather.forecast import Forecast
 
+running = True
+
+def handle_shutdown(signum, frame):
+    global running
+    running = False
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
 
 async def getweather() -> Forecast:
     # declare the client. the measuring unit used defaults to the metric system (celcius, km/h, etc.)
@@ -19,7 +31,7 @@ async def getweather() -> Forecast:
         return weather
 
 print(f'Starting iot-producer on {os.environ["KAFKA_BOOTSTRAP"]} ')
-while True:
+while running:
     try:
         # Attempt to connect to the Kafka broker
         producer = KafkaProducer(
@@ -47,7 +59,7 @@ sensor_configs = {
     }
 }
 
-while True:
+while running:
     sensor_id = random.choice(list(sensor_configs.keys()))
     data = sensor_configs[sensor_id]()
     data["sensor_id"] = sensor_id

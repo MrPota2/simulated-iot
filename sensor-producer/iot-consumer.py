@@ -7,8 +7,22 @@ import json
 import psycopg
 from datetime import datetime
 
+import signal
+import sys
+
+running = True
+
+def handle_shutdown(signum, frame):
+    global running
+    print("Shutting down...")
+    running = False
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_shutdown)
+signal.signal(signal.SIGINT, handle_shutdown)
+
 print("Starting iot-consumer...")
-while True:
+while running:
     try:
         # Attempt to connect to the PostgreSQL database
         consumer = KafkaConsumer(
@@ -24,7 +38,7 @@ while True:
         time.sleep(5)
 
 # Connect to PostgreSQL database
-while True:
+while running:
     try:
         conn = psycopg.connect("dbname=sensordata user=postgres password=postgres host=timescaledb")
         # Check if the connection is successful and the table exists
@@ -40,15 +54,6 @@ while True:
                 
                 alter table iot_metrics
                     owner to postgres;
-                
-                create index if not exists iot_metrics_time_idx
-                    on iot_metrics (time desc);
-                
-                create trigger ts_insert_blocker
-                    before insert
-                    on iot_metrics
-                    for each row
-                execute procedure ???();
             """)
             conn.commit()
         break
@@ -59,17 +64,15 @@ while True:
 cursor = conn.cursor()
 
 print("Listening to iot-data...")
-while True:
-    for msg in consumer:
-        data = msg.value
-        sensor_id = data.pop("sensor_id")
-        timestamp = datetime.utcfromtimestamp(data.pop("timestamp"))
+for msg in consumer:
+    data = msg.value
+    sensor_id = data.pop("sensor_id")
+    timestamp = datetime.utcfromtimestamp(data.pop("timestamp"))
 
-        for key, val in data.items():
-            cursor.execute(
-                "INSERT INTO iot_metrics (time, sensor_id, key, value) VALUES (%s, %s, %s, %s)",
-                (timestamp, sensor_id, key, val)
-            )
-        conn.commit()
-        print(f"Inserted data from {sensor_id} at {timestamp}")
-    time.sleep(5)
+    for key, val in data.items():
+        cursor.execute(
+            "INSERT INTO iot_metrics (time, sensor_id, key, value) VALUES (%s, %s, %s, %s)",
+            (timestamp, sensor_id, key, val)
+        )
+    conn.commit()
+    print(f"Inserted data from {sensor_id} at {timestamp}")

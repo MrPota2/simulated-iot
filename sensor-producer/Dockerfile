@@ -18,5 +18,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . .
 
-CMD sh -c "trap 'kill 0' INT TERM; python3 -u iot-producer.py & python3 -u iot-consumer.py; wait"
-
+CMD ["sh", "-c", "trap 'kill 0' INT TERM; exec python3 -u iot-producer.py & exec python3 -u iot-consumer.py; wait"]
